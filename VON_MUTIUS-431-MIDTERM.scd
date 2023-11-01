@@ -200,6 +200,8 @@ In retrospect, I am certain there is a far more natural (and far, far easier) wa
 ~semiellipses_dur_xtreme = Array.newClear(~num_arrays);
 ~semiellipses_dur_32nd = Array.newClear(~num_arrays);
 ~semiellipses_amp = Array.newClear(~num_arrays);
+~semiellipses_pan = Array.newClear(~num_arrays);
+
 
 ~num_arrays.do { |i|
 	~semiellipses_dur[i] = ~ellipticalize.value(
@@ -232,8 +234,13 @@ In retrospect, I am certain there is a far more natural (and far, far easier) wa
 		k: (0.2.bilinrand + 0.5),
 		// Stochasically determines semi-ellipse orientation
 		concave_up: [true, false].choose).collect { |val| val * 0.5 };
-};
 
+	~semiellipses_pan[i] = ~ellipticalize.value(
+		// Stochastically determines normalization range to a random value betwen 0.25 and 0.75
+		k: (1.0.rand2),
+		// Stochasically determines semi-ellipse orientation
+		concave_up: [true, false].choose).collect { |val| val - 1 };
+};
 
 /*
 
@@ -346,13 +353,6 @@ SynthDef(\pandeiro, { |out = 0, pitch = 0, amp = 0.5|
     Out.ar(out, sig);
 }).add;
 
-SynthDef(\pandeiro, { |out = 0, pitch = 0, amp = 0.5, pan = 0|
-    var bufnum = Select.kr(pitch, [~pandeiro_low, ~pandeiro_med, ~pandeiro_slap]);
-    var sig = PlayBuf.ar(2, bufnum, loop: 0) * amp;
-    var stereoSig = Pan2.ar(sig, pan);
-    Out.ar(out, stereoSig);
-}).add;
-
 
 // ****************
 // * MARKOV CHAIN *
@@ -403,7 +403,7 @@ SynthDef(\pandeiro, { |out = 0, pitch = 0, amp = 0.5, pan = 0|
 					\instrument, \pandeiro,
 					\pitch, Pseq([1, 2, 0, 2, 1, 2, 0, 2, 1, 2, 0, 2, 1, 2, 0, 2], 1),
 					\dur, 0.25,
-					\amp, Pseq(~semiellipses_pan.choose, 1)).play(~clock);
+					\amp, Pseq(~semiellipses_dur.choose, 1)).play(~clock);
 			};
 			1.wait;
 		});
@@ -418,8 +418,7 @@ SynthDef(\pandeiro, { |out = 0, pitch = 0, amp = 0.5, pan = 0|
 					\instrument, \pandeiro,
 					\pitch, Pseq([1, 2, 0, 2, 1, 2, 0, 2, 1, 2, 0, 2, 1, 2, 0, 2], 1),
 					\dur, Pseq(~semiellipses_dur.choose, 1),
-					\amp, Pseq(~semiellipses_amp.choose, 1),
-					\pan, Pseq(~semiellipses_pan.choose, 1)).play(~clock);
+					\amp, Pseq(~semiellipses_amp.choose, 1)).play(~clock);
 			};
 			1.wait;
 		});
@@ -537,7 +536,7 @@ SynthDef(\tamborim, { |out = 0, pitch = 0, amp = 0.5|
 					\instrument, \tamborim,
 					\pitch, Pseq([3, 2, 3, 2, \rest, 3, 2, 2, 3, 2, 3, 2, \rest, 3, 2, 2], 1),
 					\dur, Pseq(~semiellipses_dur_tamborim.choose, 1),
-					\amp, Pseq(~semiellipses_pan.choose, 1)).play(~clock);
+					\amp, Pseq(~semiellipses_amp.choose, 1)).play(~clock);
 			};
 			1.wait;
 		});
@@ -673,7 +672,7 @@ SynthDef(\repinique, { |out = 0, pitch = 0, amp = 0.5|
 					\instrument, \repinique,
 					\pitch, Pseq([0, 1, 2, 1, 0, 1, 2, 1], 1),
 					\dur, 0.25,
-					\amp, Pseq(~semiellipses_pan.choose, 1)).play(~clock);
+					\amp, Pseq(~semiellipses_amp.choose, 1)).play(~clock);
 			};
 			1.wait;
 		});
@@ -697,7 +696,7 @@ SynthDef(\repinique, { |out = 0, pitch = 0, amp = 0.5|
 					\instrument, \repinique,
 					\pitch, Pseq([0, 1, 2, 1, 0, 1, 2, 1], 1),
 					\dur, Pseq(~semiellipses_dur.choose, 1),
-					\amp, Pseq(~semiellipses_pan.choose, 1)).play(~clock);
+					\amp, Pseq(~semiellipses_amp.choose, 1)).play(~clock);
 			};
 			1.wait;
 		});
