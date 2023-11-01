@@ -38,10 +38,20 @@ Markov Chain Madness.
 Assignment 4, Option 1b; CPSC 431 at Yale University.
 By Leonardo von Mutius.
 
+This file contains the executable code to generate an experimental, stochastic composition entitled "Markov da Mangueira." Evaluating the block below will stochastically generate a fresh realization of "Markov da Mangueira."
 
-This file contains the executable code to generate an experimental, stochastic composition entitled "Markov Chain Madness a la Mutius." Evaluating the block below will generate 3 sections: first, a straight-time percussion groove; then, an elliptical-time percussion groove; then, an elliptical-time percussion groove with a harmony layer.
+The compositition has 3 sections, divided in 3 subsections:
+Section 1A: Surdo, Pandeiro, Tamborim (non-elliptical note durations)
+Section 1B: Surdo, Pandeiro, Tamborim, Repinique, Cuíca (non-elliptical note durations)
 
-The SynthDefs I used here were inspired by Brazilian samba music. The .wav files needed to execute this file are located in the same directory as the current file (MarkovChainMadness.scd) and were obtained from Splice. The SynthDefs are \surdo, \pandeiro, \tamborim, \repinique and \cuica.
+Section 2A: Surdo, Pandeiro, Tamborim (elliptical note durations)
+Section 2B: Surdo, Pandeiro, Tamborim, Repinique, Cuíca (elliptical note durations)
+
+Section 3A: Surdo, Pandeiro, Tamborim (VERY elliptical note durations)
+Section 3B: Surdo, Pandeiro, Tamborim, Repinique, Cuíca (VERY elliptical note durations)
+
+T
+The .wav files needed to execute this file are located in the same directory as the current file (MarkovChainMadness.scd) and were obtained from Splice. The SynthDefs are \surdo, \pandeiro, \tamborim, \repinique and \cuica.
 
 
   ___          _           _         ___ _         _
@@ -54,9 +64,9 @@ The SynthDefs I used here were inspired by Brazilian samba music. The .wav files
  |___/\___|_\___/\_/\_/(_)
 
 
-*************************************************
-* EVALUATE THE BLOCK BELOW TO RUN THE PROGRAM.  *
-*************************************************
+***************************************************************
+* EVALUATE THE BLOCK BELOW TO LISTEN TO "MARKOV DA MANGUEIRA" *
+***************************************************************
 
 */
 
@@ -239,6 +249,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 * SURDO  *
 **********
 
+
 The surdo is the only instrument whose parameters are neither stochastic nor ellipticalized. It presides over beats 1 and 3.
 
 */
@@ -258,7 +269,7 @@ SynthDef(\surdo, { |out = 0, pitch = 0, amp = 0.5|
 // * MARKOV CHAIN *
 // ****************
 //
-// This Markov Chain is actually not stochastic. I just implemented it as such for practice, as well as for // consistency with the other instruments.
+// This Markov Chain is actually not stochastic. I just implemented it as such for practice, as well as for consistency with the other instruments.
 ~surdo_state_space = [\play,\rest];
 ~surdo_start_state = \play;
 ~surdo_transition_model = Dictionary.newFrom(List[\play, [0, 1], \rest, [1, 0]]);
@@ -317,6 +328,7 @@ _| """ |_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 ************
 * PANDEIRO *
 ************
+
 
 The pandeiro is the next layer of the groove. Unlike the surdo, the pandeiro's rhythmic presence is stochastically determined. Its parameters are also ellipticalized (stochastically).
 
@@ -445,6 +457,7 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 *TAMBORIM*
 **********
 
+
 The tamborim is the next layer of the groove. The mechanics of the tamborim in this piece are virtually identical to that of the pandeiro, though the rhythms and Markov transition model are different.
 
 */
@@ -517,7 +530,7 @@ SynthDef(\tamborim, { |out = 0, pitch = 0, amp = 0.5|
 
 
 	// Section 2
-	[~tamborim_sequence_2, ~tamborim_sequence_1].do({ |seq| "Playing a sequence in Section 2!".postln;
+	[~tamborim_sequence_2, ~tamborim_sequence_1].do({ |seq|
 		seq.do({ |item|
 			if (item == \play1) {
 				Pbind(
@@ -557,8 +570,14 @@ _|"""""|_|"""""|_| """ |_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 "`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
 
 
-*REPINIQUE*
+*************
+* REPINIQUE *
+*************
 
+
+The repinique is a very unique instrument. First of all, it has additional responsibilities compared to the other instruments: the repinique plays the "chamada", a line used to signal the start of the composition AND to transition between the 6 sub-sections.
+
+However, the real kicker is its Markov chain. The Markovian assumption states that the probability of moving to the next state depends only on the present state and not on how the system arrived at that state; thus far, every instrument's state has been a function of its own previous state. However, the repinique's transition model takes into account the *previous state of other instruments!* This creates a layering effect, where the repinique will only join the fray when the surdo, pandeiro, and tamborim are currently playing. Although the repinique is a "leader" instrument in the sense that it signals the beginning and end of the composition, as well as the transition between sections, it is otherwise always listening for other instruments before joining in. The repinique is also tacet for the first half of every section.——Talk about balance of powers!
 
 */
 
@@ -636,8 +655,6 @@ SynthDef(\repinique, { |out = 0, pitch = 0, amp = 0.5|
 // ***********
 // * ROUTINE *
 // ***********
-//
-// The repinique's routine is longer than the other instruments because it has additional responsibilities: the repinique plays the pick-up measure of the composition AND the "chamada", which signals the transition between the 6 sub-sections. However, the repinique is also tacet for the first half of every section (even digital arms get tired!).
 ~repinique_routine = Routine({
 	// Pick-up measure
 	Pbind(
@@ -696,18 +713,18 @@ SynthDef(\repinique, { |out = 0, pitch = 0, amp = 0.5|
 	});
 
 	// Section 3
-	[~repinique_sequence_2, ~repinique_sequence_2].do({ |seq|
+	[~repinique_sequence_3, ~repinique_sequence_1].do({ |seq|
 		seq.do({ |item|
 			if (item == \play1) {
 				Pbind(
 					\instrument, \repinique,
 					\pitch, Pseq([0, 1, 2, 1, 0, 1, 2, 1], 1),
-					\dur, Pseq(~semiellipses_dur.choose, 1),
+					\dur, Pseq(~semiellipses_dur_xtreme.choose, 1),
 					\amp, Pseq(~semiellipses_amp.choose, 1)).play(~clock);
 			};
 			1.wait;
 		});
-		4.wait;
+		6.wait;
 		Pbind(
 			\instrument, \repinique,
 			\pitch, Pseq([3, 0, 1, 1, \rest, 1, \rest, 1, 1, \rest, \rest, \rest], 1),
@@ -722,7 +739,7 @@ SynthDef(\repinique, { |out = 0, pitch = 0, amp = 0.5|
 });
 
 /*
-
+                     //
    ___    _   _    ___     ___     ___
   / __|  | | | |  |_ _|   / __|   /   \
  | (__   | |_| |   | |   | (__    | - |
@@ -735,7 +752,8 @@ _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 * CUÍCA *
 *********
 
-The cuíca is the final instrument of the ensemble. It is unique because it operates at the 32nd-note subdivision. Like the repinique, the cuíca's
+
+The cuíca is the final instrument of the ensemble. It is unique because it operates at the 32nd-note subdivision. Like the repinique, the cuíca's state transitions are dependent on whether the other instruments are playing. However, it's transition model is a bit more probabilistic than the repinique's. Additionally, whenever the cuíca reaches \play1, it randomly picks between 1 of 2 Pbinds.
 
 */
 
@@ -749,7 +767,6 @@ SynthDef(\cuica, { |out = 0, pitch = 0, amp = 0.5|
     var sig = PlayBuf.ar(2, bufnum, loop: 0) * amp;
     Out.ar(out, sig);
 }).add;
-
 
 ~cuica_p1 = Pbind(
 	\instrument, \cuica,
@@ -767,7 +784,6 @@ SynthDef(\cuica, { |out = 0, pitch = 0, amp = 0.5|
 // * MARKOV CHAIN *
 // ****************
 //
-// The cuíca's Markov Chain is v
 ~cuica_state_space = [\play1, \play2, \rest1];
 ~cuica_start_state = \rest1;
 ~cuica_transition_model_a = Dictionary.newFrom(
@@ -818,7 +834,7 @@ SynthDef(\cuica, { |out = 0, pitch = 0, amp = 0.5|
     }
 };
 
-// Create Sequence 3, with only rests
+// Create Sequence 3, with only rests (tacet sequence)
 ~cuica_sequence_3 = List[~cuica_start_state];
 (~bpm / 2).do {~cuica_sequence_3.add(~cuica_start_state)};
 
@@ -880,6 +896,7 @@ SynthDef(\cuica, { |out = 0, pitch = 0, amp = 0.5|
 * CONTROL *
 ***********
 
+
 The control routine is responsible for posting useful information to the post window, as well as for freeing nodes at the end of each subsection.
 
 */
@@ -924,14 +941,16 @@ The control routine is responsible for posting useful information to the post wi
 	s.freeAll;
 	4.wait;
 	"Playing Section 3B!".postln;
-	43.wait;
+	44.wait;
+	6.wait;
 	4.wait;
 	s.freeAll;
-	4.wait;
-	"Fim!"
+	"Fim!".postln;
 });
 
 (
+
+// Useful information
 "*************\n**SEQUENCES**\n*************".postln;
 
 "\t * SURDO".postln;
@@ -953,7 +972,8 @@ The control routine is responsible for posting useful information to the post wi
 ("\t\t 1) " ++ ~cuica_sequence_1.asString).postln;
 ("\t\t 2) " ++ ~cuica_sequence_2.asString).postln;
 
-~clock = TempoClock(~bpm/60.0);
+
+// Execute routines (86 bpm)
 ~surdo_routine.play(~clock);
 ~pandeiro_routine.play(~clock);
 ~tamborim_routine.play(~clock);
