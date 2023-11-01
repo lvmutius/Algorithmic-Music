@@ -41,12 +41,8 @@ By Leonardo von Mutius.
 
 This file contains the executable code to generate an experimental, stochastic composition entitled "Markov Chain Madness a la Mutius." Evaluating the block below will generate 3 sections: first, a straight-time percussion groove; then, an elliptical-time percussion groove; then, an elliptical-time percussion groove with a harmony layer.
 
-The SynthDefs I used here were inspired by Brazilian samba music. The .wav files needed to execute this file are located in the same directory as the current file (MarkovChainMadness.scd) and were obtained from Splice. The SynthDefs are \surdo, \tamborim, \pandeiro, \cuica, \apito, \chocalho.
+The SynthDefs I used here were inspired by Brazilian samba music. The .wav files needed to execute this file are located in the same directory as the current file (MarkovChainMadness.scd) and were obtained from Splice. The SynthDefs are \surdo, \pandeiro, \tamborim, \agogo, and \cuica.
 
-*/
-
-
-/*
 
   ___          _           _         ___ _         _
  | __|_ ____ _| |_  _ __ _| |_ ___  | _ ) |___  __| |__
@@ -69,14 +65,27 @@ The SynthDefs I used here were inspired by Brazilian samba music. The .wav files
 // Load samples
 thisProcess.platform.recordingsDir = thisProcess.nowExecutingPath.dirname;
 ~surdo = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "surdo.wav");
-~tamborim_hi = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "tamborim_hi.wav");
+~pandeiro_low = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "pandeiro_low.wav");
+~pandeiro_med = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "pandeiro_med.wav");
+~pandeiro_slap = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "pandeiro_slap.wav");
 ~tamborim_low = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "tamborim_low.wav");
-~pandeiro_1 = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "pandeiro_hard.wav");
-~pandeiro_2 = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "pandeiro_jiggle.wav");
+~tamborim_hi = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "tamborim_hi.wav");
+~tamborim_low2 = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "tamborim_low2.wav");
+~tamborim_hi2 = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "tamborim_hi2.wav");
+~agogo_low = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "agogo_low.wav");
+~agogo_med = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "agogo_med.wav");
+~agogo_hi = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "agogo_hi.wav");
+~cuica_low = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "cuica_low.wav");
+~cuica_hi = Buffer.read(s, thisProcess.nowExecutingPath.dirname +/+ "cuica_hi.wav");
+
 
 // Set BPM
-~bpm = 85;
+~bpm = 86;
 ~clock = TempoClock(~bpm/60.0);
+
+// ~quarter = (1.0 / ~bpm) * (60);
+// ~eighth = (1.0 / ~bpm) * (60)/2;
+// ~sixteenth = (1.0 / ~bpm) * (60 / 4);
 
 
 /*
@@ -94,7 +103,8 @@ thisProcess.platform.recordingsDir = thisProcess.nowExecutingPath.dirname;
    `--'   `--'`--'   `--'`------'.--.
                                  '--'
 
-This secti of the project contains the functions, variables, and logic used to "ellipticalize" certain musical parameters. Ellipticalization is used to control _____ In section 2, for each instrument, we generate a rhythmic sequence whose parameters are shaped by an ellipse (e.g. the )
+*ELLIPTICAL TIME!*
+This section of the project contains the functions, variables, and logic used to "ellipticalize" certain musical parameters. Ellipticalization is used to control _____ In section 2, for each instrument, we generate a rhythmic sequence whose parameters are shaped by an ellipse (e.g. the )
 
 I originally attempted to implement this (as well as the instruments) as classes, but it appeared to be far too difficult and not very portable to do so in SC3.
 
@@ -114,7 +124,7 @@ In retrospect, I am certain there is a far more natural (and far, far easier) wa
 // Function: ~ellipticalize
 // Returns: a list of length x. The values are normalized to be within a range of size k (between 1 - k/2 and 1 + k/2). When plotted, the values form the countour of a semi-ellipse (i.e. one half of an ellipse).
 
-// Called by: any Pbind. Each item of the list is used as a multiplier for a parameter in a Pseq (e.g duration or amplitude). A neat feature of this function is that the mean of output approaches 1 as a approaches b, so the ellipticalization shouldn't diverge too far off from when the difference between a and b is small.
+// Called by: any Pbind, indirectly. Each item of the list is used as a multiplier for a parameter in a Pseq (e.g duration or amplitude). A neat feature of this function is that the mean of output approaches 1 as a approaches b, so the "ellipticalized" rhythms shouldn't diverge too far off from the meter when the difference between a and b is small.
 
 // This function was incredibly painstaking to work out.
 
@@ -149,7 +159,7 @@ In retrospect, I am certain there is a far more natural (and far, far easier) wa
 	// Print statement for debugging
 	// distances.postln;
 
-    normalized_distances = distances.collect { | d | ((d - b) / (a - b)) / divisor + vertical_transformation };
+    normalized_distances = distances.collect { | d | ((d - b) / (a - b)) / divisor + vertical_transformation};
 	// Print statement for debugging
 	// normalized_distances.postln;
 
@@ -157,15 +167,41 @@ In retrospect, I am certain there is a far more natural (and far, far easier) wa
     normalized_distances;
 };
 
-// Testing
-~ellipticalize.value;  // Execute the function and post the result
-~ellipticalize.value(a: 1.5, concave_up: false);
-// ~ellipticalize.value(a: 5);
-// ~results = ~ellipticalize.value;
-// ~total = ~results.sum;
-// ~average = ~results.mean;
-// ~total.postln;
-// ~average.postln;
+
+// Semi-Ellipsis Generation
+// Here, we stochastically generate 25 arrays, where each array contains a sequence of values that form the contour of a semi-ellipse. These values can be used as multipliers in a Pbind. We collect these arrays inside ~semiellipses_dur, ~semiellipses_pan, and ~semiellipses_pan.
+~num_arrays = 25;
+~semiellipses_dur = Array.newClear(~num_arrays);
+~semiellipses_dur_agogo = Array.newClear(~num_arrays);
+~semiellipses_amp = Array.newClear(~num_arrays);
+~semiellipses_pan = Array.newClear(~num_arrays);
+
+~num_arrays.do { |i|
+	~semiellipses_dur[i] = ~ellipticalize.value(
+		// Stochastically determines normalization range to a random value betwen 0.2 and 0.8
+		k: (0.1.bilinrand + 0.5),
+		// Stochasically determines semi-ellipse orientation
+		concave_up: [true, true, false].choose).collect { |val| val * 0.25 };
+
+	~semiellipses_dur_agogo[i] = ~ellipticalize.value(
+		// Stochastically determines normalization range to a random value betwen 0.1 and 0.2
+		k: (0.1.bilinrand + 0.2),
+		// Stochasically determines semi-ellipse orientation
+		concave_up: [true, true, true, false].choose).collect { |val| val * 0.125 };
+
+
+	~semiellipses_amp[i] = ~ellipticalize.value(
+		// Stochastically determines normalization range to a random value betwen 0.25 and 0.75
+		k: (0.2.bilinrand + 0.5),
+		// Stochasically determines semi-ellipse orientation
+		concave_up: [true, true, false].choose).collect { |val| val * 0.5 };
+
+	~semiellipses_pan[i] = ~ellipticalize.value(
+		k: 1,
+		// Stochasically determines semi-ellipse orientation
+		concave_up: [true, true, false].choose).collect { |val| val - 1};
+
+};
 
 
 /*
@@ -175,46 +211,201 @@ In retrospect, I am certain there is a far more natural (and far, far easier) wa
   |___/   \___/   |_|_\   |___/   \___/
 _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 "`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
+)
 
+*SURDO*
 The surdo is the only instrument whose parameters are neither stochastic nor ellipticalized. It will always play on 1 and 3.
 
 */
 
-// Surdo SynthDef
+// Define SynthDef
 SynthDef(\surdo, { |out = 0, pitch = 0, amp = 0.5|
 	var bufnum = Select.kr(pitch, [~surdo]);
     var sig = PlayBuf.ar(2, bufnum, loop: 0) * amp;
     Out.ar(out, sig);
 }).add;
 
-// Surdo Pattern 1
-Pdef(\surdo_pattern, Pbind(
+// Define rhythmic sequences
+Pdef(\surdo_p1, Pbind(
     \instrument, \surdo,
 	\pitch, Pseq([0], 1),
-    \dur, 0.25
+	\dur, 1,
+	\amp, 1.4
 ));
 
-//Surdo Markov Chain Logic (not really stochastic, just implemented as such for consistency)
+// Define Markov Chain Logic (This Markov Chain is not stochastic. I just implemented it as such for practice, as well as for consistency with the other instruments)
 ~surdo_state_space = [\play,\rest];
 ~surdo_start_state = \play;
 ~surdo_transition_model = Dictionary.newFrom(List[\play, [0, 1], \rest, [1, 0]]);
-~surdo_sequence = List[~surdo_start_state];
-50.do {|i|
-	~surdo_sequence.add(~surdo_state_space.wchoose(~surdo_transition_model[~surdo_sequence[i]]));
+
+// Generate Sequence 1
+~surdo_sequence_1 = List[~surdo_start_state];
+
+(~bpm / 2).do {|i|
+	~surdo_sequence_1.add(~surdo_state_space.wchoose(~surdo_transition_model[~surdo_sequence_1[i]]));
+	// ~surdo_sequence_1[i].postln;
 };
 
+
+// Prepare Routine
+// Each instrument has its own unique routine, and this composition is divided in 3 distinct sections (per the project requirements). However, the surdo stays constant throughout the whole piece, which is why there is only 1 sequence in this routine.
 ~surdo_routine = Routine({
-	~surdo_sequence.do({|item|
-		if (item == \play) {
-			Synth(\surdo);  // Play the Surdo sound
-		};
-		1.wait;
-	})
+	// Chain together all the sequences
+	[~surdo_sequence_1, ~surdo_sequence_1, ~surdo_sequence_1, ~surdo_sequence_1, ~surdo_sequence_1, ~surdo_sequence_1].do({ |seq|
+		seq.do({ |item|
+			if (item == \play) {
+				Pdef(\surdo_p1).play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
 });
 
 
-~surdo_routine.reset.play(~clock);
+/*
+    ___    ___    _  _     ___     ___     ___     ___     ___
+   | _ \  /   \  | \| |   |   \   | __|   |_ _|   | _ \   / _ \
+   |  _/  | - |  | .` |   | |) |  | _|     | |    |   /  | (_) |
+  _|_|_   |_|_|  |_|\_|   |___/   |___|   |___|   |_|_\   \___/
+_| """ |_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
+"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
 
+
+*PANDEIRO*
+The pandeiro is the next layer of the groove. Here, we begin introducing stochasticity.
+Much of the code for pandeiro has been reused from surdo (and later for the remaining instruments) because I did not succeed in creating an Instrument class.
+
+*/
+
+// Define SynthDef
+SynthDef(\pandeiro, { |out = 0, pitch = 0, amp = 0.5|
+    var bufnum = Select.kr(pitch, [~pandeiro_low, ~pandeiro_med, ~pandeiro_slap]);
+    var sig = PlayBuf.ar(2, bufnum, loop: 0) * amp;
+    Out.ar(out, sig);
+}).add;
+)
+
+// Define rhythmic sequences
+// (I was getting a bizarre bug where this Pdef would not sound if they key value was \pandeiro_a. I was befuddled.)
+Pdef(\pandeiro_pattern_a,
+	Pbind(
+		\instrument, \pandeiro,
+		\pitch, Pseq([1, 2, 0, 2, 1, 2, 0, 2, 1, 2, 0, 2, 1, 2, 0, 2], 1),
+		\dur, 0.25,
+		\amp, Pseq(~semiellipses_pan.choose, 1))
+);
+
+
+Pdef(\pandeiro_b,
+	Pbind(
+		\instrument, \pandeiro,
+		\pitch, Pseq([2, 3, 1, 3, 2, 3, 1, 3, 2, 3, 1, 3, 2, 3, 1, 3], 1),
+		\dur, Pseq(~semiellipses_dur.choose, 1),
+		\amp, Pseq(~semiellipses_pan.choose, 1))
+);
+
+
+// Define Markov Chain Logic
+// The reason there are multiple "play" states is that the Pdef lasts 4 beats, but each state in the Markov chain only lasts 1 beat. The Pdef is triggered at the \play1 state, and we must move through play2, play3, and play4 to ensure the entire Pdef can be played before potentially getting triggered again.
+~pandeiro_state_space = [\play1, \play2, \play3, \play4, \rest1];
+~pandeiro_start_state = \play1;
+~pandeiro_transition_model = Dictionary.newFrom(
+	List[\play1, [0, 1, 0, 0, 0],
+		\play2, [0, 0, 1, 0, 0],
+		\play3, [0, 0, 0, 1, 0],
+		\play4, [0.67, 0, 0, 0, 0.33],
+		\rest1, [0.75, 0, 0, 0, 0.25]]);
+
+// Generate Sequence 1
+ ~pandeiro_sequence_1 = List[~pandeiro_start_state];
+(~bpm / 2).do { |i|
+	~pandeiro_sequence_1.add(~pandeiro_state_space.wchoose(~pandeiro_transition_model[~pandeiro_sequence_1[i]]));
+	// ~pandeiro_sequence_1[i].postln;
+};
+
+// Genereate Sequence 2
+ ~pandeiro_sequence_2 = List[~pandeiro_start_state];
+(~bpm / 2).do { |i|
+~pandeiro_sequence_2.add(~pandeiro_state_space.wchoose(~pandeiro_transition_model[~pandeiro_sequence_2[i]]));
+	// ~pandeiro_sequence_2[i].postln;
+};
+
+
+// Prepare Routine
+// Each instrument has their own unique routine, divided in 3 distinct sections (per the project requirements).
+/*~pandeiro_routine = Routine({
+
+	// Section 1
+	[~pandeiro_sequence_1, ~pandeiro_sequence_2].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				Pdef(\pandeiro_a).play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
+
+	// Section 2
+	[~pandeiro_sequence_2, ~pandeiro_sequence_1].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				Pdef(\pandeiro_a).play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
+
+		//Section 3
+	[~pandeiro_sequence_2, ~pandeiro_sequence_1].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				Pdef(\pandeiro_b).play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
+});*/
+
+// ~pandeiro_routine = Routine({
+// 	// Section 1
+// 	[~tamborim_sequence_1, ~tamborim_sequence_2].do({ |seq|
+// 		seq.do({ |item|
+// 			if (item == \play1) {
+// 				Pdef(\tamborim_a).play(~clock);
+// 			};
+// 			1.wait;
+// 		});
+// 		3.wait;
+// 	});
+//
+// 	// // Section 2
+// 	// [~tamborim_sequence_2, ~tamborim_sequence_1].do({ |seq|
+// 	// 	seq.do({ |item|
+// 	// 		if (item == \play1) {
+// 	// 			Pdef(\tamborim_b).play(~clock);
+// 	// 		};
+// 	// 		1.wait;
+// 	// 	});
+// 	// 	3.wait;
+// 	// });
+// 	//
+// 	// // Section 3
+// 	// [~tamborim_sequence_2, ~tamborim_sequence_1].do({ |seq|
+// 	// 	seq.do({ |item|
+// 	// 		if (item == \play1) {
+// 	// 			Pdef(\tamborim_b).play(~clock);
+// 	// 		};
+// 	// 		1.wait;
+// 	// 	});
+// 	// 	3.wait;
+// 	// });
+// });
+//
+)
 /*
   _____    ___   __  __    ___     ___     ___     ___   __  __
  |_   _|  /   \ |  \/  |  | _ )   / _ \   | _ \   |_ _| |  \/  |
@@ -222,208 +413,269 @@ Pdef(\surdo_pattern, Pbind(
   _|_|_   |_|_| |_|__|_|  |___/   \___/   |_|_\   |___| |_|__|_|
 _|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
 "`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
+
+*TAMBORIM*
+The pandeiro is another layer of the groove. The mechanics of the tamborim in this piece are very similar to that of the pandeiro.
 */
 
-// Tamborim SynthDef
+// Define SynthDef
 SynthDef(\tamborim, { |out = 0, pitch = 0, amp = 0.5|
-    var bufnum = Select.kr(pitch, [~tamborim_low, ~tamborim_hi]);
+    var bufnum = Select.kr(pitch, [~tamborim_low, ~tamborim_hi, ~tamborim_low2, ~tamborim_hi2]);
     var sig = PlayBuf.ar(2, bufnum, loop: 0) * amp;
     Out.ar(out, sig);
 }).add;
 
 
-// Tamborim parameters
-~tamborim_subdivision = 16.0;
-~tamborim_duration = 4.0 / ~subdivision;
-
-
-// Here, we stochastically generate 25 arrays and collect them inside ~tamborim_durations. Each array contains an "ellipticalized" sequence of durations to be used in a Pbind.
-~num_arrays = 25
-~tamborim_durations = Array.newClear(~num_arrays);
-
-~num_arrays.do {
-	~tamborim_durations.add([1])}
-
-		~tamborim_durations.value;
-
-
-		~ellipticalize.value(
-			n: ~tamborim_subdivision,
-			// Stochastically determines normalization range
-			k: (0.3.bilinrand + 0.5),
-			// Stochasically determines semi-ellipse orientation
-			concave_up: [true, true, true, true, false].choose).collect { |val| val * 0.5 })
-}
-
-
-~tamborim_durations.value;
-
-
-
-		)
-
-)
-
-	20.do {(0.3.bilinrand + 0.5).postln}
-
-(~ellipticalize.value(n: 16, k: rr)).collect { |val| val * 0.25 };
-~tamborim_amplitude = (~ellipticalize.value(n: 16, k: rrand(0.25, 0.75))).collect { |val| val * 0.5 };
-
-~test = ~ellipsize_results.collect { |val| val * 0.25 };
-~ellipsize_results.value.postln;
-~test.postln;
-
-20.do({ (((1.5.sum3rand) + 1.5) / 2).postln; });    // quasi-gaussian, bell-shaped.
-
-
-0.25.rand(0.5);
-
-
-20.do({ 1.0.sum3rand.postln; });    // quasi-gaussian, bell-shaped.
-
-1.0.linrand     // probability decreases linearly from 0 to <number>.
-
-/*y = Routine({
-	Pbind(
-    \instrument, \tamborim,
-    \pitch, Pseq([1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0], 2),
-	\dur, Pseq(~test, 2)).play;
-
-
-	})
-});*/
-
-)
-~tamborim_p1 = Pbind(
-    \instrument, \tamborim,
-    \pitch, Pseq([0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 2),
-	\dur, Pseq(~tamborim_durations, 2),
-	\amp, Pseq(~tamborim_amplitude, 2));
-
-~tamborim_p1.play;
-
-~tamborim_p2 = Pbind(
-    \instrument, \tamborim,
-    \pitch, Pseq([1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0], 2),
-	\dur, Pseq(~tamborim_durations, 2),
-	\amp, Pseq(~tamborim_amplitude, 2));
-
-
-~tamborim_p2.play;
-
-
-
-Pdef(\tamborim_p1,
-	Pbind(
-		\instrument, \tamborim,
-		\pitch, Pseq([1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0], 2),
-		\dur, Pseq(~test, 2)))
-
-Pdef(\tamborim_p1).play;
-
-Pdef(\tamborim_p1,
-    Pbind(
-        \instrument, \tamborim,
-        \pitch, Pseq([1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0], 2),
-        \dur, Pseq(~test, 2)
-    )
+// Define rhythmic sequences
+Pdef(\tamborim_a,
+		Pbind(
+			\instrument, \tamborim,
+			\pitch, Pseq([1, 0, 1, 0, \rest, 1, 0, 0, 1, 0, 1, 0, \rest, 1, 0, 0], 1),
+			\dur, 0.25,
+			\amp, Pseq(~semiellipses_amp.choose, 1))
 );
 
-Pdef(\tamborim_p1).source.postln;  // This should print the Pbind definition
-Pdef(\tamborim_p1);
+Pdef(\tamborim_b,
+		Pbind(
+			\instrument, \tamborim,
+			\pitch, Pseq([3, 2, 3, 2, \rest, 3, 2, 2, 3, 2, 3, 2, \rest, 3, 2, 2], 1),
+			\dur, Pseq(~semiellipses_dur.choose, 1),
+			\amp, Pseq(~semiellipses_pan.choose, 1))
+);
 
 
-Pdef(\tamborim_p1).play(~clock);
+// Markov Chain Logic
+~tamborim_state_space = [\play1, \play2, \play3, \play4, \rest1, \rest2, \rest3];
+~tamborim_start_state = \rest1;
+~tamborim_transition_model = Dictionary.newFrom(
+	List[\play1, [0, 1, 0, 0, 0, 0, 0],
+		\play2, [0, 0, 1, 0, 0, 0, 0],
+		\play3, [0, 0, 0, 1, 0, 0, 0],
+		\play4, [0.5, 0, 0, 0, 0.5, 0, 0],
+		\rest1, [0.4, 0, 0, 0, 0.0, 0.3, 0.3],
+		\rest2, [0.3, 0, 0, 0, 0.0, 0.2, 0.5],
+		\rest3, [0.80, 0, 0, 0, 0, 0, 0.1]]);
+
+
+// Create Sequence 1
+ ~tamborim_sequence_1 = List[~tamborim_start_state];
+(~bpm / 2).do { |i|
+	~tamborim_sequence_1.add(~tamborim_state_space.wchoose(~tamborim_transition_model[~tamborim_sequence_1[i]]));
+	// ~tamborim_sequence_1[i].postln;
+};
+
+
+// Create Sequence 2
+ ~tamborim_sequence_2 = List[~tamborim_start_state];
+(~bpm / 2).do { |i|
+~tamborim_sequence_2.add(~tamborim_state_space.wchoose(~tamborim_transition_model[~tamborim_sequence_2[i]]));
+	// ~tamborim_sequence_2[i].postln;
+};
+
+
+// Prepare Routine
+// Each instrument has their own unique routine, divided in 3 distinct sections (per the project requirements).
+~tamborim_routine = Routine({
+	// Section 1
+	[~tamborim_sequence_1, ~tamborim_sequence_2].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				Pdef(\tamborim_a).play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
+
+	// Section 2
+	[~tamborim_sequence_2, ~tamborim_sequence_1].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				Pdef(\tamborim_b).play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
+
+	// Section 3
+	[~tamborim_sequence_2, ~tamborim_sequence_1].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				Pdef(\tamborim_b).play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
+});
 
 
 
+~clock = TempoClock(~bpm/60.0);
+~surdo_routine.play(~clock);
+~pandeiro_routine.play(~clock);
+// ~tamborim_routine.play(~clock);
+~pandeiro_sequence_1.value.postln;
+)
 
-	// \dur, ~ellipsize_results.collect { |val| 0.25 * val })).play;
-
-Synth(\surdo);
-Synth(\tambori
-
-{
-~subdivision = 16.0;
-~duration = 4.0 / ~subdivision;
-~ellipsize_results = ~ellipsize.value(~subdivision);
-
-
-Pdef(\tamborim_p1,
-	var subdivision = 16;
-    var duration = 4 / subdivision;
-	var ellipsize_results = ~ellipsize.value(subdivision);
-{
-    Pbind(
-        \instrument, \tamborim,
-        \pitch, Pseq([1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0], 2),
-        \dur, ~ellipsize.value(subdivision).collect { |val| duration * val })}).play;
-
-}
-
-Pbind(
-	var subdivision = 16;
-	var duration = 4 / subdivsion;
-	\instrument, \tamborim,
-	\pitch, Pseq([1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0], 2),
-	\dur, ~ellipsize(x = subdivision).value.collect { |val| duration * }).play(~clock);
+/*
+   ___     ___     ___     ___     ___
+  /   \   / __|   / _ \   / __|   / _ \
+  | - |  | (_ |  | (_) | | (_ |  | (_) |
+  |_|_|   \___|   \___/   \___|   \___/
+_|"""""|_|"""""|_|"""""|_|"""""|_|"""""|
+"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'
 
 
+*AGOGÔ*
 
-// Pandeiro SynthDef
-SynthDef(\pandeiro, { |out = 0, pitch = 0, amp = 0.5|
-    var bufnum = Select.kr(pitch, [~pandeiro_1, ~pandeiro_2]);
+The agogô bells introduce two neat new features. First, they are rhythmically operating at the 32nd-note level. Second, they have two different transition model dictionaries. The reason for this is that the design of the agogo bells is such that they are *MUCH* more likely to enter the fray if both the pandeiro and the tamborim are already playing.
+
+The Markovian assumption states that the future state of a system depends only on the current state and not on the sequence of states that preceded it. Thus far, we have treated every instrument as its own system with its own Markov chain. However, the agogô bells are different in that their future state is also dependent on the current state of the other Markov chains! In this sense, this composition is just one enormous Markov chain, where each state lasts 1 beat and is the aggregate of the states of each instrument.
+
+*/
+
+	// Agogo SynthDef
+SynthDef(\agogo, { |out = 0, pitch = 0, amp = 0.5|
+    var bufnum = Select.kr(pitch, [~agogo_low, ~agogo_med, ~agogo_hi]);
     var sig = PlayBuf.ar(2, bufnum, loop: 0) * amp;
     Out.ar(out, sig);
 }).add;
 
-// Tamborim Markov Chain setup
-~pset_tamborim = [\play1, \play2, \play3, \play4, \rest];
-~current_tamborim = \play1;  // Start with play1 state
+// Define rhythmic sequences
+Pdef(\agogo_a,
+		Pbind(
+			\instrument, \agogo,
+			\pitch, Pseq([2, \rest, \rest, 0, \rest, \rest, 2, \rest, \rest, 2, \rest, \rest, 0, \rest, 0, \rest], 1),
+			\dur, 0.125,
+			\amp, Pseq(~semiellipses_amp.choose, 1))
+);
 
-// Weights for tamborim states
-~weights_tamborim = Dictionary.newFrom([
-	\play1, [\play2],
-	\play2, [\play3],
-	\play3, [\play4],
-	\play4, [0.5, 0.5], // 50% chance for play1 and 50% for rest
-	\rest, [0.75, 0.25]  // 75% rest, 25% play1
-]);
+Pdef(\agogo_b,
+		Pbind(
+			\instrument, \agogo,
+			\pitch, Pseq([1, 1, \rest, 1, \rest, 0, 1, \rest, 2, \rest, \rest, \rest, \rest, \rest, \rest, \rest], 1),
+			\dur, 0.125,
+			\amp, Pseq(~semiellipses_pan.choose, 1))
+);
 
-// Create a list of tamborim states
-~melody_tamborim = List[~current_tamborim];
+// Create array that we will later use .choose on for stochastic music-making
+~agogo_ab = [Pdef(\agogo_a), Pdef(\agogo_a), Pdef(\agogo_a), Pdef(\agogo_a), Pdef(\agogo_b)];
 
-// Generate tamborim sequence using Markov Chain
-50.do {|i|
-	~melody_tamborim.add(~pset_tamborim.wchoose(~weights_tamborim[~melody_tamborim[i]]));
+Pdef(\agogo_c,
+		Pbind(
+			\instrument, \agogo,
+			\pitch, Pseq([1, 1, \rest, 1, \rest, 0, 1, \rest, 3, 2, 3, 2, \rest, 3, 2, 2], 1),
+			\dur, Pseq(~semiellipses_dur_agogo.choose, 1),
+			\amp, Pseq(~semiellipses_pan.choose, 1))
+);
+
+Pdef(\agogo_d,
+		Pbind(
+			\instrument, \agogo,
+			\pitch, Pseq([1, 1, \rest, 1, \rest, 0, 1, \rest, 2, \rest, \rest, \rest, \rest, \rest, \rest, \rest], 1),
+			\dur, Pseq(~semiellipses_dur_agogo.choose, 1),
+			\amp, Pseq(~semiellipses_pan.choose, 1))
+);
+
+~agogo_cd = [Pdef(\agogo_c), Pdef(\agogo_d)];
+
+
+// Markov Chain Logic
+~agogo_state_space = [\play1, \play2, \rest1];
+~agogo_start_state = \rest1;
+~agogo_transition_model_a = Dictionary.newFrom(
+		List[\play1, [0, 1, 0],
+			\play2, [0, 0, 1],
+			\rest1, [0.05, 0, 0.95]
+	]);
+
+~agogo_transition_model_b = Dictionary.newFrom(
+		List[\play1, [0, 1, 0],
+			\play2, [0.67, 0, 0.33],
+			\rest1, [0.4, 0, 0.6]
+	]);
+
+
+// Create Sequence 1
+ ~agogo_sequence_1 = List[~agogo_start_state];
+(~bpm / 2).do { |i|
+
+		if (~pandeiro_sequence_1[i] != \rest1 &&
+			~tamborim_sequence_1[i] != \rest1 &&
+			~tamborim_sequence_1[i] != \rest2 &&
+		~tamborim_sequence_1[i] != \rest3)
+		{
+			~agogo_sequence_1.add(~agogo_state_space.wchoose(~agogo_transition_model_b[~agogo_sequence_1[i]]));
+		} {
+			~agogo_sequence_1.add(~agogo_state_space.wchoose(~agogo_transition_model_a[~agogo_sequence_1[i]]));
+		}
 };
 
-"Melody Tamborim = ".postln ++ ~melody_tamborim;
+// Create Sequence 2
+~agogo_sequence_2 = List[~agogo_start_state];
+(~bpm / 2).do { |i|
 
-// Convert Markov Chain states to musical actions for tamborim
-~convert_tamborim = Dictionary.newFrom([
-	\play1, \tamborim_pattern,
-	\play2, Rest(0.5),
-	\play3, Rest(0.5),
-	\play4, Rest(0.5),
-	\rest, Rest(0.5)
-]);
+		if (~pandeiro_sequence_1[i] != \rest1 &&
+			~tamborim_sequence_1[i] != \rest1 &&
+			~tamborim_sequence_1[i] != \rest2 &&
+		~tamborim_sequence_1[i] != \rest3)
+		{
+			~agogo_sequence_2.add(~agogo_state_space.wchoose(~agogo_transition_model_b[~agogo_sequence_2[i]]));
+		} {
+			~agogo_sequence_2.add(~agogo_state_space.wchoose(~agogo_transition_model_a[~agogo_sequence_2[i]]));
+		}
+};
 
-// Create a routine to play the generated Tamborim melody
-r_tamborim = Routine({
-	~melody_tamborim.do({|item|
-		if (item == \play1) {
-			Synth(\tamborim, [\pitch, 0]);  // Play the tamborim sound
-		};
-		0.5.wait;  // Wait for half a beat
-	})
+// Prepare Routine
+~agogo_routine = Routine({
+	// Section 1
+	[~agogo_sequence_1, ~agogo_sequence_2].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				~agogo_ab.choose.play(~clock);
+				};
+			1.wait;
+		});
+		3.wait;
+	});
+
+	// Section 2
+	[~agogo_sequence_2, ~agogo_sequence_1].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				~agogo_cd.choose.play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
+
+	// Section 3
+	[~agogo_sequence_2, ~agogo_sequence_1].do({ |seq|
+		seq.do({ |item|
+			if (item == \play1) {
+				~agogo_cd.choose.play(~clock);
+			};
+			1.wait;
+		});
+		3.wait;
+	});
 });
 
-// Finally, play both routines together
-fork {
-	r.play;
-	r_tamborim.play;
-}
+
+
+
+~clock = TempoClock(~bpm/60.0);
+~surdo_routine.play(~clock);
+~pandeiro_routine.play(~clock);
+~tamborim_routine.play(~clock);
+~agogo_routine.play(~clock);
+
+
+
+s.meter;
 
 
 
